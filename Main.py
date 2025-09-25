@@ -690,22 +690,23 @@ if __name__ == '__main__':
     train_data = pd.read_pickle(os.path.join(data_directory, 'train_data.df'))
     test_data = pd.read_pickle(os.path.join(data_directory, 'test_data.df'))
 
-    trueNews_file = os.path.join(data_directory, 'Credible items.npy')
-    true_news = np.load(trueNews_file)
-    true_news = true_news[true_news !=0]
+    credible_items_file = os.path.join(data_directory, 'Credible items.npy')
+    credible_items_set = np.load(credible_items_file)
+    credible_items_set = credible_items_set[credible_items_set !=0]
 
 
     all_items = list(range(item_num + 1))
-    negative_items = [item for item in all_items if item not in true_news]
+    uncredible_items = [item for item in all_items if item not in credible_items_set]
 
-    num_negative_partial = len(negative_items) // 5
-    random.shuffle(negative_items)
-    negative_items_partial = negative_items[:num_negative_partial]
+    # randomly select 20% uncredible items
+    num_uncredible_partial = len(uncredible_items) // 5
+    random.shuffle(uncredible_items)
+    uncredible_items_partial = uncredible_items[:num_uncredible_partial]
 
-    non_negative_items = [item for item in all_items if item not in negative_items_partial]
+    unknown_items_set = [item for item in all_items if item not in uncredible_items_partial]
 
 
-    non_negative_items = [item for item in non_negative_items if item != 0]
+    unkonwn_items = [item for item in unknown_items_set if item != 0]
 
     log_path = './Log/ours/{}/{}.txt'.format(args.data, str(Time.time()))
 
@@ -735,28 +736,31 @@ if __name__ == '__main__':
     for i in range(args.epoch):
         start_time = Time.time()
         for j in range(num_batches):
-            all_negative_embeddings, all_non_negative_embeddings = model.feature_disentangle(model.item_embeddings.weight)
+            # content disentanglement
+            all_uncredible_embeddings, all_preference_embeddings = model.feature_disentangle(model.item_embeddings.weight)
 
-            negative_embeddings = all_negative_embeddings[negative_items_partial]
+            uncredilbe_embeddings = all_uncredible_embeddings[uncredible_items_partial]
 
-            non_negative_items_embeddings = model.item_embeddings.weight[non_negative_items]
+            credible_embeddings = model.item_embeddings.weight[unkonwn_items]
 
             iterations += 1
 
+            # current selection ratio
             current_rate = min(max_rate, (iterations / interations_to_max_rate) * max_rate)
 
 
-            non_negative_items_negative_embeddings = all_negative_embeddings[non_negative_items]
+            unkonwn_uncredible_embeddings = all_uncredible_embeddings[unkonwn_items]
 
 
 
 
             if current_rate > 0:
-                negative_norm = F.normalize(negative_embeddings, dim=1)
-                non_negative_norm = F.normalize(non_negative_items_negative_embeddings, dim=-1)
-                sim_matrix = torch.matmul(negative_norm.cuda(), non_negative_norm.cuda().t())  # [neg_num, non_neg_num]
+                # calculating cosine similarity
+                negative_norm = F.normalize(uncredilbe_embeddings, dim=1)
+                non_negative_norm = F.normalize(unkonwn_uncredible_embeddings, dim=-1)
+                sim_matrix = torch.matmul(negative_norm.cuda(), non_negative_norm.cuda().t())
 
-                num_select = max(1, int(current_rate * non_negative_items_embeddings.shape[0]))
+                num_select = max(1, int(current_rate * uncredilbe_embeddings.shape[0]))
 
                 sim_matrix_flat = torch.mean(sim_matrix, 0)
 
@@ -766,16 +770,16 @@ if __name__ == '__main__':
                     topk_values, topk_indices = torch.topk(sim_matrix_flat, num_select)
     
 
-                non_neg_indices = topk_indices % non_negative_items_embeddings.shape[0]
+                non_neg_indices = topk_indices % uncredilbe_embeddings.shape[0]
                 selected_indices = torch.unique(non_neg_indices)
 
     
-    
-                new_negative_embeddings = non_negative_items_negative_embeddings[selected_indices]
+                # select potential uncredible content items
+                new_uncredible_embeddings = unkonwn_uncredible_embeddings[selected_indices]
                 
-                negative_expanded_embeddings = torch.cat([negative_embeddings, new_negative_embeddings], dim=0)
+                uncredible_expanded_embeddings = torch.cat([uncredilbe_embeddings, new_uncredible_embeddings], dim=0)
             else:
-                negative_expanded_embeddings = negative_embeddings
+                uncredible_expanded_embeddings = uncredilbe_embeddings
 
             batch = train_data.sample(n=args.batch_size).to_dict()
             seq = list(batch['seq'].values())
@@ -812,8 +816,8 @@ if __name__ == '__main__':
 
             if args.disentangle_type == 'pre_disentangle':
                 # pre_disentangment
-                h_neg = model.cacu_h_neg(seq, all_negative_embeddings, len_seq, args.p)
-                h_non = model.cacu_h(seq, all_non_negative_embeddings, len_seq, args.p)
+                h_neg = model.cacu_h_neg(seq, all_uncredible_embeddings, len_seq, args.p)
+                h_non = model.cacu_h(seq, all_preference_embeddings, len_seq, args.p)
             elif args.disentangle_type == 'post_disentangle':
                 # post_disentangment
                 h = model.cacu_h(seq, model.item_embeddings.weight, len_seq, args.p)
@@ -821,18 +825,21 @@ if __name__ == '__main__':
 
 
 
-
-            U, S, V = torch.linalg.svd(negative_expanded_embeddings.t(), full_matrices=False, driver="gesvd")
+            # SVD
+            U, S, V = torch.linalg.svd(uncredible_expanded_embeddings.t(), full_matrices=False, driver="gesvd")
             r = (S > args.null_threshold).sum().item()
 
-            neg_basis = U[:, r:]
+            # U2
+            credible_basis = U[:, r:]
 
-            P_perp = neg_basis @ neg_basis.t()
+            P_perp = credible_basis @ credible_basis.t()
 
             alpha = args.residual_coef
 
+            # Null space projection
             x_start_proj = x_start @ P_perp
 
+            # Residual connection
             x_start_new = alpha * x_start_proj + (1 - alpha) * x_start
 
 
@@ -843,7 +850,7 @@ if __name__ == '__main__':
 
             loss_term1, loss_term2, loss_term3 = diff.p_losses(model, x_start_r, x_start_neg_item, h_non, h_neg, n, loss_type='l2')
 
-
+            # L_Disco
             loss = loss_term1 - loss_term2 + args.pref_strength * (loss_term1 - loss_term3)
 
 
@@ -869,7 +876,7 @@ if __name__ == '__main__':
                 print(test_msg)
                 log_file.write(test_msg + '\n')
                 log_file.flush()
-                _ = evaluate(model, 'test_data.df', true_news, diff, negative_expanded_embeddings, device, log_file, P_perp)
+                _ = evaluate(model, 'test_data.df', credible_items_set, diff, uncredible_expanded_embeddings, device, log_file, P_perp)
                 eval_time_msg = 'Test cost: {:2f} s'.format(Time.time() - eval_start)
                 print(eval_time_msg)
                 log_file.write(eval_time_msg + '\n')
