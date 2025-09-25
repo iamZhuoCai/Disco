@@ -756,9 +756,9 @@ if __name__ == '__main__':
 
             if current_rate > 0:
                 # calculating cosine similarity
-                negative_norm = F.normalize(uncredilbe_embeddings, dim=1)
-                non_negative_norm = F.normalize(unkonwn_uncredible_embeddings, dim=-1)
-                sim_matrix = torch.matmul(negative_norm.cuda(), non_negative_norm.cuda().t())
+                uncredible_norm = F.normalize(uncredilbe_embeddings, dim=1)
+                credible_norm = F.normalize(unkonwn_uncredible_embeddings, dim=-1)
+                sim_matrix = torch.matmul(uncredible_norm.cuda(), credible_norm.cuda().t())
 
                 num_select = max(1, int(current_rate * uncredilbe_embeddings.shape[0]))
 
