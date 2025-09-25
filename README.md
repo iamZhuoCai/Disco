@@ -1,5 +1,5 @@
 # Disco
 
-This is the implementation of our ICLR 2026 submission:
+This is the implementation of our ICLR 2026 submission.
 
-Our used datasets are too big, which cannot be uploaded. Hence, we upload our data into an anonymous huggingface rep: https://huggingface.co/datasets/anony-user-2025/Credible_rec_data/tree/main
+We only upload the PolitiFact dataset, as the GossipCop and MHMisinfo datasets exceed the file size limitation. These two datasets will be released after notification.
