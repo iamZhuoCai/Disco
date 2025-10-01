@@ -165,7 +165,7 @@ class CrossAttention(nn.Module):
         Q = Q.view(batch_size, seq_len_q, self.num_heads, self.head_dim).transpose(1, 2)
         K = K.view(batch_size, seq_len_kv, self.num_heads, self.head_dim).transpose(1, 2)
         V = V.view(batch_size, seq_len_kv, self.num_heads, self.head_dim).transpose(1, 2)
-        # 现在形状为: [batch_size, num_heads, seq_len, head_dim]
+
         
 
         scores = torch.matmul(Q, K.transpose(-2, -1)) / (self.head_dim ** 0.5)
