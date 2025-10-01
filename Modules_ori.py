@@ -115,10 +115,6 @@ class MultiHeadAttention(nn.Module):
 
 
 class CrossAttention(nn.Module):
-    """
-    实现图片中的交叉注意力机制
-    ê_n^t = LayerNorm(CrossAtt([e_n^t || β^t], C_k^adj) + e_n^t)
-    """
     def __init__(self, hidden_size, num_heads=8, dropout_rate=0.1):
         super().__init__()
         self.hidden_size = hidden_size
@@ -127,19 +123,19 @@ class CrossAttention(nn.Module):
         
         self.head_dim = hidden_size // num_heads
         
-        # Query, Key, Value 线性变换
+
         self.linear_q = nn.Linear(hidden_size, hidden_size)
         self.linear_k = nn.Linear(hidden_size, hidden_size)
         self.linear_v = nn.Linear(hidden_size, hidden_size)
         
-        # 输出投影
+
         self.linear_out = nn.Linear(hidden_size, hidden_size)
         
-        # Layer Norm 和 Dropout
+
         self.layer_norm = nn.LayerNorm(hidden_size)
         self.dropout = nn.Dropout(dropout_rate)
         
-        # 初始化权重
+
         self._init_weights()
     
     def _init_weights(self):
@@ -154,57 +150,47 @@ class CrossAttention(nn.Module):
         nn.init.zeros_(self.linear_out.bias)
     
     def forward(self, query, key_value, mask=None):
-        """
-        Args:
-            query: [batch_size, seq_len_q, hidden_size] - 对应 [e_n^t || β^t]
-            key_value: [batch_size, seq_len_kv, hidden_size] - 对应 C_k^adj
-            mask: 可选的注意力掩码
-        
-        Returns:
-            output: [batch_size, seq_len_q, hidden_size]
-        """
+
         batch_size, seq_len_q, _ = query.shape
         seq_len_kv = key_value.shape[1]
         
-        # 保存残差连接的输入
+
         residual = query
         
-        # 线性变换
+
         Q = self.linear_q(query)  # [batch_size, seq_len_q, hidden_size]
         K = self.linear_k(key_value)  # [batch_size, seq_len_kv, hidden_size]
         V = self.linear_v(key_value)  # [batch_size, seq_len_kv, hidden_size]
-        
-        # 重塑为多头形式
+
         Q = Q.view(batch_size, seq_len_q, self.num_heads, self.head_dim).transpose(1, 2)
         K = K.view(batch_size, seq_len_kv, self.num_heads, self.head_dim).transpose(1, 2)
         V = V.view(batch_size, seq_len_kv, self.num_heads, self.head_dim).transpose(1, 2)
         # 现在形状为: [batch_size, num_heads, seq_len, head_dim]
         
-        # 计算注意力分数
+
         scores = torch.matmul(Q, K.transpose(-2, -1)) / (self.head_dim ** 0.5)
         # scores: [batch_size, num_heads, seq_len_q, seq_len_kv]
         
-        # 应用掩码（如果提供）
+
         if mask is not None:
             scores = scores.masked_fill(mask == 0, -1e9)
         
-        # 应用softmax
+
         attn_weights = F.softmax(scores, dim=-1)
         attn_weights = self.dropout(attn_weights)
-        
-        # 应用注意力权重
+
         attn_output = torch.matmul(attn_weights, V)
         # attn_output: [batch_size, num_heads, seq_len_q, head_dim]
         
-        # 重塑回原始形状
+
         attn_output = attn_output.transpose(1, 2).contiguous().view(
             batch_size, seq_len_q, self.hidden_size
         )
         
-        # 输出投影
+
         output = self.linear_out(attn_output)
         
-        # 残差连接 + Layer Norm
+
         output = self.layer_norm(output + residual)
         
         return output
