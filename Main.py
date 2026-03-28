@@ -29,14 +29,12 @@ def parse_args():
     parser.add_argument('--epoch', type=int, default=500,
 
                         help='Number of max epochs.')
-    parser.add_argument('--data', nargs='?', default='MHMisinfo',
+    parser.add_argument('--data', nargs='?', default='GossipCop',
                         help='PolitiFact, GossipCop, MHMisinfo')
     parser.add_argument('--random_seed', type=int, default=0,
                         help='random seed')
     parser.add_argument('--batch_size', type=int, default=2048*8,
                         help='Batch size.')
-    parser.add_argument('--layers', type=int, default=1,
-                        help='gru_layers')
     parser.add_argument('--hidden_factor', type=int, default=3072,
                         help='Number of hidden factors')
     parser.add_argument('--timesteps', type=int, default=2000,
@@ -47,30 +45,22 @@ def parse_args():
                         help='beta end of diffusion')
     parser.add_argument('--beta_start', type=float, default=0.0001,
                         help='beta start of diffusion')
-    parser.add_argument('--lr', type=float, default=0.00005,
-                        help='Learning rate. PolitiFact, MHMisinfo=0.00005, Gossip: 0.0001')
-    parser.add_argument('--l2_decay', type=float, default=0.001,
-                        help='l2 loss reg coef.')
+    parser.add_argument('--lr', type=float, default=0.0001,
+                        help='Learning rate. PolitiFact, MHMisinfo=0.0001, Gossip: 0.0001')
+    parser.add_argument('--l2_decay', type=float, default=0.01,
+                        help='l2 loss reg coef. Gossip: 0.01')
     parser.add_argument('--cuda', type=int, default=1,
                         help='cuda device.')
     parser.add_argument('--dropout_rate', type=float, default=0,
                         help='dropout ')
-    parser.add_argument('--w', type=float, default=0.0,
-                        help='classifier-free guidance weight. Politi: 0.0, Full: 4.0')
-    parser.add_argument('--p', type=float, default=0.1,
-                        help='dropout ')
-    parser.add_argument('--residual_coef', type=float, default=0.5,
-                        help='residual coef.')
-    parser.add_argument('--pref_strength', type=float, default=1,
-                        help='pref_strength')
-    parser.add_argument('--max_rate', type=float, default=0.4,
-                        help='max rate.')
+    parser.add_argument('--pref_strength', type=float, default=1.5,
+                        help='pref_strength. PolitiFact: 0.5, GossipCop: 1.5, MHMisinfo: 1')
+    parser.add_argument('--gamma', type=float, default=0.1,
+                        help='max rate. PolitiFact: 0.1, GossipCop: 0.1, MHMisinfo: 0.4')
     parser.add_argument('--interations_to_max_rate', type=int, default=10000,
                         help='interations to max rate, Full: 10000')
     parser.add_argument('--null_threshold', type=float, default=3,
                         help='null threshold.')
-    parser.add_argument('--disentangle_type', type=str, default='pre_disentangle',
-                        help='type of diffuser. pre_disentangle, post_disentangle')
     parser.add_argument('--report_epoch', type=bool, default=True,
                         help='report frequency')
     parser.add_argument('--diffuser_type', type=str, default='mlp1',
@@ -79,8 +69,6 @@ def parse_args():
                         help='type of optimizer.')
     parser.add_argument('--beta_sche', nargs='?', default='linear',
                         help='')
-    parser.add_argument('--descri', type=str, default='',
-                        help='description of the work.')
     return parser.parse_args()
 
 
@@ -137,11 +125,10 @@ def betas_for_alpha_bar(num_diffusion_timesteps, alpha_bar, max_beta=0.999):
 
 
 class diffusion():
-    def __init__(self, timesteps, beta_start, beta_end, w):
+    def __init__(self, timesteps, beta_start, beta_end):
         self.timesteps = timesteps
         self.beta_start = beta_start
         self.beta_end = beta_end
-        self.w = w
 
         if args.beta_sche == 'linear':
             self.betas = linear_beta_schedule(timesteps=self.timesteps, beta_start=self.beta_start,
@@ -224,7 +211,6 @@ class diffusion():
         # 
         if noise is None:
             noise = torch.randn_like(x_start)
-            # noise = torch.randn_like(x_start) / 100
 
         # 
         x_noisy = self.q_sample(x_start=x_start, t=t, noise=noise)
@@ -414,7 +400,7 @@ class Tenc(nn.Module):
             )
         
 
-        self.negative_feature_learner = nn.Sequential(
+        self.uncredible_feature_learner = nn.Sequential(
             nn.Dropout(0.2),
             nn.Linear(self.hidden_size, self.hidden_size),
             nn.GELU(),
@@ -423,7 +409,7 @@ class Tenc(nn.Module):
             nn.GELU(),
         )
 
-        self.non_negative_feature_learner = nn.Sequential(
+        self.preference_feature_learner = nn.Sequential(
             nn.Dropout(0.2),
             nn.Linear(self.hidden_size, self.hidden_size),
             nn.GELU(),
@@ -446,33 +432,36 @@ class Tenc(nn.Module):
     
 
     def _initialize_weights(self):
+        # 遍历并初始化 nn.Sequential 中的每一层
         for module in self.diffuser:
-            if isinstance(module, nn.Linear):
-                nn.init.normal_(module.weight)
+            if isinstance(module, nn.Linear):  # 针对 nn.Linear 层
+                nn.init.normal_(module.weight)  # Xavier 初始化
                 # if module.bias is not None:
-                #     nn.init.constant_(module.bias, 0.0)
+                #     nn.init.constant_(module.bias, 0.0)  # 偏置初始化为 0
         for module in self.step_mlp:
-            if isinstance(module, nn.Linear):
-                nn.init.normal_(module.weight)
+            if isinstance(module, nn.Linear):  # 针对 nn.Linear 层
+                nn.init.normal_(module.weight)  # Xavier 初始化
                 # if module.bias is not None:
-                #     nn.init.constant_(module.bias, 0.0)
+                #     nn.init.constant_(module.bias, 0.0)  # 偏置初始化为 0
         for module in self.emb_mlp:
-            if isinstance(module, nn.Linear):
-                nn.init.normal_(module.weight)
+            if isinstance(module, nn.Linear):  # 针对 nn.Linear 层
+                nn.init.normal_(module.weight)  # Xavier 初始化
                 # if module.bias is not None:
-                #     nn.init.constant_(module.bias, 0.0)
+                #     nn.init.constant_(module.bias, 0.0)  # 偏置初始化为 0
         for module in self.diff_mlp:
-            if isinstance(module, nn.Linear):
-                nn.init.normal_(module.weight)
+            if isinstance(module, nn.Linear):  # 针对 nn.Linear 层
+                nn.init.normal_(module.weight)  # Xavier 初始化
+                # if module.bias is not None:
+                #     nn.init.constant_(module.bias, 0.0)  # 偏置初始化为 0
         for module in self.feature_transformation:
-            if isinstance(module, nn.Linear):
-                nn.init.normal_(module.weight)
+            if isinstance(module, nn.Linear):  # 针对 nn.Linear 层
+                nn.init.normal_(module.weight)  # Xavier 初始化
         for module in self.negative_feature_learner:
-            if isinstance(module, nn.Linear):
-                nn.init.normal_(module.weight)
+            if isinstance(module, nn.Linear):  # 针对 nn.Linear 层
+                nn.init.normal_(module.weight)  # Xavier 初始化
         for module in self.non_negative_feature_learner:
-            if isinstance(module, nn.Linear):
-                nn.init.normal_(module.weight)
+            if isinstance(module, nn.Linear):  # 针对 nn.Linear 层
+                nn.init.normal_(module.weight)  # Xavier 初始化
 
     def forward(self, x, h, step):
 
@@ -505,7 +494,7 @@ class Tenc(nn.Module):
 
         return x
 
-    def cacu_h(self, states, item_embeddings, len_states, p):
+    def cacu_condition_pre(self, states, item_embeddings):
         # hidden
         inputs_emb = item_embeddings[states]
         inputs_emb += self.positional_embeddings(torch.arange(self.state_size).to(self.device))
@@ -525,7 +514,7 @@ class Tenc(nn.Module):
 
         return h
     
-    def cacu_h_neg(self, states, item_embeddings, len_states, p):
+    def cacu_condition_unc(self, states, item_embeddings):
         # hidden
         inputs_emb = item_embeddings[states]
         seq = self.emb_dropout(inputs_emb)
@@ -554,7 +543,22 @@ class Tenc(nn.Module):
 
         h = ff_out[:, - 1, :]
 
+        # pilot_experiments
+        target = torch.LongTensor([int(x) for x in target])
+        target = target.to(device)
+
+        target_embedding = self.item_embeddings(target)
+        # target_embedding_neg, target_embedding_non = self.feature_disentangle(target_embedding)
+
+
+        x_start_proj = torch.matmul(target_embedding, P_perp)
+        # h_proj = torch.matmul(h, P_perp)
+        target_embedding_r = (x_start_proj + target_embedding)/2
+
+
         x = diff.sample(self.forward, self.forward_negative, h)
+
+        # x = diff.sample(self.forward, self.forward_negative, h)
 
         test_item_emb = self.item_embeddings.weight
 
@@ -566,12 +570,12 @@ class Tenc(nn.Module):
 
     
     def feature_disentangle(self, emb):
-        negative_feature = self.negative_feature_learner(emb)
+        uncredible_feature = self.uncredible_feature_learner(emb)
 
-        non_negative_feature = self.non_negative_feature_learner(emb)
+        preference_feature = self.preference_feature_learner(emb)
 
 
-        return negative_feature, non_negative_feature
+        return uncredible_feature, preference_feature
 
 
 def evaluate(model, test_data, true_news, diff, negative_expanded_embeddings, device, log_file, P_perp):
@@ -616,11 +620,11 @@ def evaluate(model, test_data, true_news, diff, negative_expanded_embeddings, de
 
     true_rate_list = []
 
-    header_msg = '{:<s}\t{:<s}\t{:<s}\t{:<s}\t{:<s}\t{:<s}\t{:<s}\t{:<s}\t{:<s}\t{:<s}\t{:<s}\t{:<s}\t{:<s}\t{:<s}\t{:<s}\t{:<s}'.format(
-            'HR@' + str(topk[0]), 'HR@' + str(topk[1]), 'HR@' + str(topk[2]), 'HR@' + str(topk[3]),
-            'NDCG@' + str(topk[0]), 'NDCG@' + str(topk[1]), 'NDCG@' + str(topk[2]), 'NDCG@' + str(topk[3]),
-            'MRR@' + str(topk[0]), 'MRR@' + str(topk[1]), 'MRR@' + str(topk[2]), 'MRR@' + str(topk[3]),
-            'TR@' + str(topk[0]), 'TR@' + str(topk[1]), 'TR@' + str(topk[2]), 'TR@' + str(topk[3]))
+    header_msg = '{:<s}\t{:<s}\t{:<s}\t{:<s}\t{:<s}\t{:<s}\t{:<s}\t{:<s}'.format(
+            'HR@' + str(topk[0]), 'HR@' + str(topk[1]),
+            'NDCG@' + str(topk[0]), 'NDCG@' + str(topk[1]),
+            'MRR@' + str(topk[0]), 'MRR@' + str(topk[1]),
+            'CR@' + str(topk[0]), 'CR@' + str(topk[1]))
     print(header_msg)
     if log_file:
         log_file.write(header_msg + '\n')
@@ -642,8 +646,8 @@ def evaluate(model, test_data, true_news, diff, negative_expanded_embeddings, de
             hr_20 = hr_purchase
 
 
-    results_msg = '{:<.4f}\t{:<.4f}\t{:<.4f}\t{:<.4f}\t{:<.4f}\t{:<.4f}\t{:<.4f}\t{:<.4f}\t{:<.4f}\t{:<.4f}\t{:<.4f}\t{:<.4f}\t{:<.4f}\t{:<.4f}\t{:<.4f}\t{:<.4f}'.format(hr_list[0], hr_list[1], hr_list[2], hr_list[3], (ndcg_list[0]), (ndcg_list[1]), (ndcg_list[2]), (ndcg_list[3]), (mrr_list[0]), (mrr_list[1]), (mrr_list[2]), (mrr_list[3]), true_rate_list[0],  true_rate_list[1],
-                                                                  true_rate_list[2], true_rate_list[3])
+    results_msg = '{:<.4f}\t{:<.4f}\t{:<.4f}\t{:<.4f}\t{:<.4f}\t{:<.4f}\t{:<.4f}\t{:<.4f}'.format(hr_list[0], hr_list[1], (ndcg_list[0]), (ndcg_list[1]), (mrr_list[0]), (mrr_list[1]), true_rate_list[0],  true_rate_list[1]
+                                                                  )
     print(results_msg)
     if log_file:
         log_file.write(results_msg + '\n')
@@ -663,13 +667,13 @@ if __name__ == '__main__':
         os.path.join(data_directory, 'data_statis.df'))  # read data statistics, includeing seq_size and item_num
     seq_size = data_statis['seq_size'][0]  # the length of history to define the seq
     item_num = data_statis['item_num'][0]  # total number of items
-    topk = [1, 5, 10, 20]
+    topk = [5, 10]
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     timesteps = args.timesteps
 
     model = Tenc(args.hidden_factor, item_num, seq_size, args.dropout_rate, args.diffuser_type, device)
-    diff = diffusion(args.timesteps, args.beta_start, args.beta_end, args.w)
+    diff = diffusion(args.timesteps, args.beta_start, args.beta_end)
 
     if args.optimizer == 'adam':
         optimizer = torch.optim.Adam(model.parameters(), lr=args.lr, eps=1e-8, weight_decay=args.l2_decay)
@@ -687,7 +691,7 @@ if __name__ == '__main__':
     train_data = pd.read_pickle(os.path.join(data_directory, 'train_data.df'))
     test_data = pd.read_pickle(os.path.join(data_directory, 'test_data.df'))
 
-    credible_items_file = os.path.join(data_directory, 'Credible items.npy')
+    credible_items_file = os.path.join(data_directory, 'credible_items.npy')
     credible_items_set = np.load(credible_items_file)
     credible_items_set = credible_items_set[credible_items_set !=0]
 
@@ -726,7 +730,7 @@ if __name__ == '__main__':
     num_rows = train_data.shape[0]
     num_batches = int(num_rows / args.batch_size)
 
-    max_rate = args.max_rate
+    max_rate = args.gamma
     interations_to_max_rate = args.interations_to_max_rate
     iterations = 0
 
@@ -809,17 +813,10 @@ if __name__ == '__main__':
 
             x_start_neg_item = model.cacu_x(target_neg)
 
-
-
-            if args.disentangle_type == 'pre_disentangle':
-                # pre_disentangment
-                h_neg = model.cacu_h_neg(seq, all_uncredible_embeddings, len_seq, args.p)
-                h_non = model.cacu_h(seq, all_preference_embeddings, len_seq, args.p)
-            elif args.disentangle_type == 'post_disentangle':
-                # post_disentangment
-                h = model.cacu_h(seq, model.item_embeddings.weight, len_seq, args.p)
-                h_neg, h_non = model.feature_disentangle(h)
-
+            # uncredible content condition
+            c_unc = model.cacu_condition_unc(seq, all_uncredible_embeddings)
+            # preference condition
+            c_pre = model.cacu_condition_pre(seq, all_preference_embeddings)
 
 
             # SVD
@@ -831,13 +828,11 @@ if __name__ == '__main__':
 
             P_perp = credible_basis @ credible_basis.t()
 
-            alpha = args.residual_coef
-
             # Null space projection
             x_start_proj = x_start @ P_perp
 
             # Residual connection
-            x_start_new = alpha * x_start_proj + (1 - alpha) * x_start
+            x_start_new = (x_start_proj + x_start)/2
 
 
             x_start_r = x_start_new
@@ -845,7 +840,7 @@ if __name__ == '__main__':
 
             n = torch.randint(0, args.timesteps, (args.batch_size,), device=device).long()
 
-            loss_term1, loss_term2, loss_term3 = diff.p_losses(model, x_start_r, x_start_neg_item, h_non, h_neg, n, loss_type='l2')
+            loss_term1, loss_term2, loss_term3 = diff.p_losses(model, x_start_r, x_start_neg_item, c_pre, c_unc, n, loss_type='l2')
 
             # L_Disco
             loss = loss_term1 - loss_term2 + args.pref_strength * (loss_term1 - loss_term3)
