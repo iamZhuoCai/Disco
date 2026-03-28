@@ -29,7 +29,7 @@ def parse_args():
     parser.add_argument('--epoch', type=int, default=500,
 
                         help='Number of max epochs.')
-    parser.add_argument('--data', nargs='?', default='GossipCop',
+    parser.add_argument('--data', nargs='?', default='PolitiFact',
                         help='PolitiFact, GossipCop, MHMisinfo')
     parser.add_argument('--random_seed', type=int, default=0,
                         help='random seed')
@@ -46,19 +46,19 @@ def parse_args():
     parser.add_argument('--beta_start', type=float, default=0.0001,
                         help='beta start of diffusion')
     parser.add_argument('--lr', type=float, default=0.0001,
-                        help='Learning rate. PolitiFact, MHMisinfo=0.0001, Gossip: 0.0001')
+                        help='Learning rate. PolitiFact, MHMisinfo: 0.0001, Gossip: 0.0001')
     parser.add_argument('--l2_decay', type=float, default=0.01,
-                        help='l2 loss reg coef. Gossip: 0.01')
+                        help='l2 loss reg coef. PolitiFact, MHMisinfo: 0.001 Gossip: 0.01')
     parser.add_argument('--cuda', type=int, default=1,
                         help='cuda device.')
     parser.add_argument('--dropout_rate', type=float, default=0,
                         help='dropout ')
-    parser.add_argument('--pref_strength', type=float, default=1.5,
+    parser.add_argument('--pref_strength', type=float, default=0.5,
                         help='pref_strength. PolitiFact: 0.5, GossipCop: 1.5, MHMisinfo: 1')
     parser.add_argument('--gamma', type=float, default=0.1,
                         help='max rate. PolitiFact: 0.1, GossipCop: 0.1, MHMisinfo: 0.4')
     parser.add_argument('--interations_to_max_rate', type=int, default=10000,
-                        help='interations to max rate, Full: 10000')
+                        help='interations to max rate')
     parser.add_argument('--null_threshold', type=float, default=3,
                         help='null threshold.')
     parser.add_argument('--report_epoch', type=bool, default=True,
