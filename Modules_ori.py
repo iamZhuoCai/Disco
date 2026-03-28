@@ -9,14 +9,6 @@ class PositionwiseFeedForward(nn.Module):
         self.w_1 = nn.Conv1d(d_in, d_hid, 1)
         self.w_2 = nn.Conv1d(d_hid, d_in, 1)
 
-        # nn.init.xavier_uniform_(self.w_1.weight)
-        # nn.init.xavier_uniform_(self.w_2.weight)
-
-        # nn.init.xavier_normal_(self.w_1.weight)
-        # nn.init.xavier_normal_(self.w_2.weight)
-
-        # nn.init.normal_(self.w_1.weight)
-        # nn.init.normal_(self.w_2.weight)
 
         self.layer_norm = nn.LayerNorm(d_in)
         self.dropout = nn.Dropout(dropout)
@@ -41,17 +33,7 @@ class MultiHeadAttention(nn.Module):
         self.linear_q = nn.Linear(hidden_size, num_units)
         self.linear_k = nn.Linear(hidden_size, num_units)
         self.linear_v = nn.Linear(hidden_size, num_units)
-        # nn.init.xavier_uniform_(self.linear_q.weight)
-        # nn.init.xavier_uniform_(self.linear_k.weight)
-        # nn.init.xavier_uniform_(self.linear_v.weight)
 
-        # nn.init.xavier_normal_(self.linear_q.weight)
-        # nn.init.xavier_normal_(self.linear_k.weight)
-        # nn.init.xavier_normal_(self.linear_v.weight)
-
-        # nn.init.normal_(self.linear_q.weight)
-        # nn.init.normal_(self.linear_k.weight)
-        # nn.init.normal_(self.linear_v.weight)
 
         self.dropout = nn.Dropout(dropout_rate)
         self.softmax = nn.Softmax(dim=-1)
@@ -113,85 +95,4 @@ class MultiHeadAttention(nn.Module):
 
         return output_res
 
-
-class CrossAttention(nn.Module):
-    def __init__(self, hidden_size, num_heads=8, dropout_rate=0.1):
-        super().__init__()
-        self.hidden_size = hidden_size
-        self.num_heads = num_heads
-        assert hidden_size % num_heads == 0
-        
-        self.head_dim = hidden_size // num_heads
-        
-
-        self.linear_q = nn.Linear(hidden_size, hidden_size)
-        self.linear_k = nn.Linear(hidden_size, hidden_size)
-        self.linear_v = nn.Linear(hidden_size, hidden_size)
-        
-
-        self.linear_out = nn.Linear(hidden_size, hidden_size)
-        
-
-        self.layer_norm = nn.LayerNorm(hidden_size)
-        self.dropout = nn.Dropout(dropout_rate)
-        
-
-        self._init_weights()
-    
-    def _init_weights(self):
-        nn.init.xavier_uniform_(self.linear_q.weight)
-        nn.init.xavier_uniform_(self.linear_k.weight)
-        nn.init.xavier_uniform_(self.linear_v.weight)
-        nn.init.xavier_uniform_(self.linear_out.weight)
-        
-        nn.init.zeros_(self.linear_q.bias)
-        nn.init.zeros_(self.linear_k.bias)
-        nn.init.zeros_(self.linear_v.bias)
-        nn.init.zeros_(self.linear_out.bias)
-    
-    def forward(self, query, key_value, mask=None):
-
-        batch_size, seq_len_q, _ = query.shape
-        seq_len_kv = key_value.shape[1]
-        
-
-        residual = query
-        
-
-        Q = self.linear_q(query)  # [batch_size, seq_len_q, hidden_size]
-        K = self.linear_k(key_value)  # [batch_size, seq_len_kv, hidden_size]
-        V = self.linear_v(key_value)  # [batch_size, seq_len_kv, hidden_size]
-
-        Q = Q.view(batch_size, seq_len_q, self.num_heads, self.head_dim).transpose(1, 2)
-        K = K.view(batch_size, seq_len_kv, self.num_heads, self.head_dim).transpose(1, 2)
-        V = V.view(batch_size, seq_len_kv, self.num_heads, self.head_dim).transpose(1, 2)
-
-        
-
-        scores = torch.matmul(Q, K.transpose(-2, -1)) / (self.head_dim ** 0.5)
-        # scores: [batch_size, num_heads, seq_len_q, seq_len_kv]
-        
-
-        if mask is not None:
-            scores = scores.masked_fill(mask == 0, -1e9)
-        
-
-        attn_weights = F.softmax(scores, dim=-1)
-        attn_weights = self.dropout(attn_weights)
-
-        attn_output = torch.matmul(attn_weights, V)
-        # attn_output: [batch_size, num_heads, seq_len_q, head_dim]
-        
-
-        attn_output = attn_output.transpose(1, 2).contiguous().view(
-            batch_size, seq_len_q, self.hidden_size
-        )
-        
-
-        output = self.linear_out(attn_output)
-        
-
-        output = self.layer_norm(output + residual)
-        
-        return output
 
