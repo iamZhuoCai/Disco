@@ -20,7 +20,7 @@ pandas==2.2.2
 #### MHMisinfo
 ```python Main.py --data=MHMisinfo --l2_dacay=0.001 --pref_strength==1 --gamma==0.4```
 
-## Citation
+##📖 Citation
 If you find this repository useful, please cite:
 
 ```bibtex
