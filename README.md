@@ -7,7 +7,9 @@ We use GossipCop, PolitiFact and MHMisinfo datasets in our experiments. The comp
 
 ## Requirements
 torch==2.3.0
+
 numpy==1.26.4
+
 pandas==2.2.2
 
 ## Quick Start
