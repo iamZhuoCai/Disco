@@ -1,5 +1,5 @@
 # Disco
 
-This is the implementation of our ICLR 2026 submission.
+This repository contains the official implementation of the paper “Steering Diffusion Models Towards Credible Content Recommendation” in ICLR 2026.
 
-We only upload the PolitiFact dataset, as the GossipCop and MHMisinfo datasets exceed the file size limitation. These two datasets will be released after notification.
+# Dataset
