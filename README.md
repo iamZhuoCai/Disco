@@ -5,6 +5,17 @@ This repository contains the official implementation of the paper “Steering Di
 ## Dataset
 We use GossipCop, PolitiFact and MHMisinfo datasets in our experiments. The completed datasets after preprocessing can be downloaded from https://huggingface.co/datasets/anony-user-2025/Disco/tree/main
 
+## Requirements
+torch==2.3.0
+numpy==1.26.4
+pandas==2.2.2
+
+## Quick Start
+### PolitiFact
+```python ```
+### GossipCop
+### MHMisinfo
+
 ## Citation
 If you find this repository useful, please cite:
 
