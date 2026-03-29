@@ -15,9 +15,9 @@ pandas==2.2.2
 ## Quick Start
 #### PolitiFact
 ```python Main.py --data=PolitiFact --l2_dacay=0.001 --pref_strength==0.5 --gamma==0.1```
-### GossipCop
+#### GossipCop
 ```python Main.py --data=GossipCop --l2_dacay=0.001 --pref_strength==1.5 --gamma==0.1```
-### MHMisinfo
+#### MHMisinfo
 ```python Main.py --data=MHMisinfo --l2_dacay=0.01 --pref_strength==1 --gamma==0.4```
 
 ## Citation
