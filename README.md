@@ -33,3 +33,6 @@ If you find this repository useful, please cite:
   year={2026}
 }
 ```
+
+## Acknowledgement
+Our code is based on \link{DreamRec}{https://github.com/YangZhengyi98/DreamRec}.
