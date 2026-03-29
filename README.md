@@ -35,4 +35,4 @@ If you find this repository useful, please cite:
 ```
 
 ## ❤️ Acknowledgement
-Our code is based on [DreamRec](https://github.com/YangZhengyi98/DreamRec).
+Our code is based on [DreamRec](https://github.com/YangZhengyi98/DreamRec). Thanks for the authors' incredible work and contribution to this community.
