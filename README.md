@@ -8,9 +8,11 @@ We use GossipCop, PolitiFact and MHMisinfo datasets in our experiments. The comp
 ## Citation
 If you find this repository useful, please cite:
 
+```bibtex
 @inproceedings{caisteering,
   title={Steering Diffusion Models Towards Credible Content Recommendation},
   author={Cai, Zhuo and Wang, Shoujin and Li, Jin and Zhou, Peilin and Chu, Victor W and Chen, Fang and Zhu, Tianqing and Aggarwal, Charu C},
   booktitle={The Fourteenth International Conference on Learning Representations},
   year={2026}
 }
+```
