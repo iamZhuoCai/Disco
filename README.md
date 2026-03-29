@@ -34,5 +34,5 @@ If you find this repository useful, please cite:
 }
 ```
 
-## Acknowledgement
-Our code is based on \link{DreamRec}{https://github.com/YangZhengyi98/DreamRec}.
+## ❤️ Acknowledgement
+Our code is based on [DreamRec](https://github.com/YangZhengyi98/DreamRec).
