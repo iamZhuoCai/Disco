@@ -335,7 +335,8 @@ class Tenc(nn.Module):
         news_embeddings = self.feature_transformation(news_embeddings)
 
         news_embeddings = self.diagonalize_and_scale(news_embeddings)
-        news_embeddings = self.diagonalize_and_scale(news_embeddings)
+        if args.data != "GossipCop":
+            news_embeddings = self.diagonalize_and_scale(news_embeddings)
 
 
         self.item_embeddings_text = nn.Embedding(num_embeddings + 1, hidden_size)
@@ -430,39 +431,6 @@ class Tenc(nn.Module):
     
         return transformed_e
     
-
-    def _initialize_weights(self):
-        # 遍历并初始化 nn.Sequential 中的每一层
-        for module in self.diffuser:
-            if isinstance(module, nn.Linear):  # 针对 nn.Linear 层
-                nn.init.normal_(module.weight)  # Xavier 初始化
-                # if module.bias is not None:
-                #     nn.init.constant_(module.bias, 0.0)  # 偏置初始化为 0
-        for module in self.step_mlp:
-            if isinstance(module, nn.Linear):  # 针对 nn.Linear 层
-                nn.init.normal_(module.weight)  # Xavier 初始化
-                # if module.bias is not None:
-                #     nn.init.constant_(module.bias, 0.0)  # 偏置初始化为 0
-        for module in self.emb_mlp:
-            if isinstance(module, nn.Linear):  # 针对 nn.Linear 层
-                nn.init.normal_(module.weight)  # Xavier 初始化
-                # if module.bias is not None:
-                #     nn.init.constant_(module.bias, 0.0)  # 偏置初始化为 0
-        for module in self.diff_mlp:
-            if isinstance(module, nn.Linear):  # 针对 nn.Linear 层
-                nn.init.normal_(module.weight)  # Xavier 初始化
-                # if module.bias is not None:
-                #     nn.init.constant_(module.bias, 0.0)  # 偏置初始化为 0
-        for module in self.feature_transformation:
-            if isinstance(module, nn.Linear):  # 针对 nn.Linear 层
-                nn.init.normal_(module.weight)  # Xavier 初始化
-        for module in self.negative_feature_learner:
-            if isinstance(module, nn.Linear):  # 针对 nn.Linear 层
-                nn.init.normal_(module.weight)  # Xavier 初始化
-        for module in self.non_negative_feature_learner:
-            if isinstance(module, nn.Linear):  # 针对 nn.Linear 层
-                nn.init.normal_(module.weight)  # Xavier 初始化
-
     def forward(self, x, h, step):
 
         t = self.step_mlp(step)
