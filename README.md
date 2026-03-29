@@ -2,17 +2,17 @@
 
 This repository contains the official implementation of the paper “Steering Diffusion Models Towards Credible Content Recommendation” in ICLR 2026.
 
-## Dataset
+## 📦 Dataset
 We use GossipCop, PolitiFact and MHMisinfo datasets in our experiments. The completed datasets after preprocessing can be downloaded from https://huggingface.co/datasets/anony-user-2025/Disco/tree/main
 
-## Requirements
+## 📋 Requirements
 torch==2.3.0
 
 numpy==1.26.4
 
 pandas==2.2.2
 
-## Quick Start
+## 🚀 Quick Start
 #### PolitiFact
 ```python Main.py --data=PolitiFact --l2_dacay=0.001 --pref_strength==0.5 --gamma==0.1```
 #### GossipCop
