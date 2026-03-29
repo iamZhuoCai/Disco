@@ -1,6 +1,7 @@
 # Disco
 
 This repository contains the official implementation of the paper “Steering Diffusion Models Towards Credible Content Recommendation” in ICLR 2026.
+
 <img width="4682" height="2420" alt="ResDiffREc-Framework2" src="https://github.com/user-attachments/assets/e8991e35-da00-4288-a655-1738a3f9eb5b" />
 
 ## 📦 Dataset
