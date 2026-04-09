@@ -550,11 +550,10 @@ def evaluate(model, test_data, true_news, diff, negative_expanded_embeddings, de
     eval_data = pd.read_pickle(os.path.join(data_directory, test_data))
 
     batch_size = 100
-    total_purchase = 0.0
     hit_purchase = [0, 0, 0, 0]
     ndcg_purchase = [0, 0, 0, 0]
     mrr_purchase = [0, 0, 0, 0]
-    true_rate = [0, 0, 0, 0]
+    credible_rate = [0, 0, 0, 0]
 
     seq, len_seq, target = list(eval_data['seq'].values), list(eval_data['len_seq'].values), list(
         eval_data['next'].values)
@@ -577,7 +576,7 @@ def evaluate(model, test_data, true_news, diff, negative_expanded_embeddings, de
         topK = topK.cpu().detach().numpy()
         sorted_list2 = np.flip(topK, axis=1)
         sorted_list2 = sorted_list2
-        calculate_hit(sorted_list2, topk, target_b, hit_purchase, ndcg_purchase, mrr_purchase, true_rate, true_news)
+        calculate_hit(sorted_list2, topk, target_b, hit_purchase, ndcg_purchase, mrr_purchase, credible_rate, true_news)
 
         total_purchase += batch_size
 
@@ -586,7 +585,7 @@ def evaluate(model, test_data, true_news, diff, negative_expanded_embeddings, de
     mrr_list = []
 
 
-    true_rate_list = []
+    credible_rate_list = []
 
     header_msg = '{:<s}\t{:<s}\t{:<s}\t{:<s}\t{:<s}\t{:<s}\t{:<s}\t{:<s}'.format(
             'HR@' + str(topk[0]), 'HR@' + str(topk[1]),
@@ -602,19 +601,19 @@ def evaluate(model, test_data, true_news, diff, negative_expanded_embeddings, de
         hr_purchase = hit_purchase[i] / num_total
         ng_purchase = ndcg_purchase[i] / num_total
         mr_purchase = mrr_purchase[i] / num_total
-        tr_rate = true_rate[i] / num_total
+        cre_rate = credible_rate[i] / num_total
 
         hr_list.append(hr_purchase)
         ndcg_list.append(ng_purchase)
         mrr_list.append(mr_purchase)
 
-        true_rate_list.append(tr_rate)
+        credible_rate_list.append(cre_rate)
 
         if i == 1:
             hr_20 = hr_purchase
 
 
-    results_msg = '{:<.4f}\t{:<.4f}\t{:<.4f}\t{:<.4f}\t{:<.4f}\t{:<.4f}\t{:<.4f}\t{:<.4f}'.format(hr_list[0], hr_list[1], (ndcg_list[0]), (ndcg_list[1]), (mrr_list[0]), (mrr_list[1]), true_rate_list[0],  true_rate_list[1]
+    results_msg = '{:<.4f}\t{:<.4f}\t{:<.4f}\t{:<.4f}\t{:<.4f}\t{:<.4f}\t{:<.4f}\t{:<.4f}'.format(hr_list[0], hr_list[1], (ndcg_list[0]), (ndcg_list[1]), (mrr_list[0]), (mrr_list[1]), credible_rate_list[0],  credible_rate_list[1]
                                                                   )
     print(results_msg)
     if log_file:
