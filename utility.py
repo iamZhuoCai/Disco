@@ -75,7 +75,7 @@ def normalize(inputs,
 
     return outputs
 
-def calculate_hit(sorted_list,topk,true_items,hit_purchase,ndcg_purchase, mrr_purchase, true_rate, true_news):
+def calculate_hit(sorted_list,topk,groundtruth_items,hit_purchase,ndcg_purchase, mrr_purchase, credible_rate, credible_items):
     for i in range(len(topk)):
         rec_list = sorted_list[:, -topk[i]:]
 
@@ -83,16 +83,16 @@ def calculate_hit(sorted_list,topk,true_items,hit_purchase,ndcg_purchase, mrr_pu
         # print(true_items)
         # print('...........')
         # break
-        for j in range(len(true_items)):
+        for j in range(len(groundtruth_items)):
             # print(rec_list[j])
-            true_num = len(set(rec_list[j]) & set(true_news))
+            credible_num = len(set(rec_list[j]) & set(credible_items))
             # print(true_num)
-            true_rate[i] += float(true_num / topk[i])
+            credible_rate[i] += float(credible_num / topk[i])
 
             # detection_accuracy = seq_labels_b[j] + predicted_label[j]
 
 
-            if true_items[j] in rec_list[j]:
+            if groundtruth_items[j] in rec_list[j]:
                 # print(rec_list[j])
             # if 0 in rec_list[j]:
                 rank = topk[i] - np.argwhere(rec_list[j] == true_items[j])
