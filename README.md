@@ -16,11 +16,11 @@ pandas==2.2.2
 
 ## 🚀 Quick Start
 #### PolitiFact
-```python Main.py -u --data PolitiFact --l2_dacay 0.001 --pref_strength 0.5 --gamma 0.1```
+```python Main.py -u --data PolitiFact --l2_decay 0.001 --pref_strength 0.5 --gamma 0.1```
 #### GossipCop
-```python Main.py -u --data GossipCop --l2_dacay 0.01 --pref_strength 1.5 --gamma 0.1```
+```python Main.py -u --data GossipCop --l2_decay 0.01 --pref_strength 1.5 --gamma 0.1```
 #### MHMisinfo
-```python Main.py -u --data MHMisinfo --l2_dacay 0.001 --pref_strength 1 --gamma 0.4```
+```python Main.py -u --data MHMisinfo --l2_decay 0.001 --pref_strength 1 --gamma 0.4```
 
 ## 📖 Citation
 If you find this repository useful, please cite:
